@@ -1,21 +1,21 @@
 import requests
 import json
+import html
 import pandas as pd
 from functools import lru_cache
 from configparser import ConfigParser
 
 
-lang_dict = {'English':'en', 'Chinese':'zh', 'Korean':'ko', 'French':'fr', 'German':'de', 'Russian':'ru', 'Japanese':'ja', 'Polish': 'pl', 'Spanish':'es', 'Italian':'it', 'Vietnamese': 'vi', 'Arabic':'ar', 'Dutch':'nl', 'Indonesian':'id', 'Portuguese':'pt', 'Swedish':'sv', 'Thai':'th', 'Turkish':'tr'}
-lang_list = ['English', 'Chinese', 'Korean', 'French', 'German', 'Russian', 'Japanese', 'Polish', 'Spanish', 'Italian', 'Vietnamese', 'Arabic', 'Dutch', 'Indonesian', 'Portuguese', 'Swedish', 'Thai', 'Turkish', 'Origin', 'Chinese1']
+lang_dict = {'English':'en', 'Chinese':'zh', 'Korean':'ko', 'French':'fr', 'German':'de', 'Russian':'ru', 'Japanese':'ja', 'Polish': 'pl', 'Spanish':'es', 'Italian':'it', 'Vietnamese': 'vi', 'Arabic':'ar', 'Dutch':'nl', 'Indonesian':'id', 'Portuguese':'pt', 'Swedish':'sv', 'Thai':'th', 'Turkish':'tr', 'Chinese(Simplified)': 'zh_Hans', 'Chinese(Traditional)': 'zh-Hant'}
+lang_list = ['English', 'Chinese', 'Korean', 'French', 'German', 'Russian', 'Japanese', 'Polish', 'Spanish', 'Italian', 'Vietnamese', 'Arabic', 'Dutch', 'Indonesian', 'Portuguese', 'Swedish', 'Thai', 'Turkish', 'Chinese(Simplified)', 'Chinese(Traditional)']
 
 
 #problem
-# cannot recognise 'meh...' or double quatation marks or '&' when in survey
 
 #feature request
 # interface
 # efficiency: exclude a string once substituted
-# auto generate collector list
+# for a specific locale
 
 
 class Monkey():
@@ -55,8 +55,19 @@ class Monkey():
         return self.deleter
 
     def getCollectorURL(self, survey_id):
-        self.cURL = self.s.get(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors')
-        return self.cURL
+        self.cURL = self.s.get(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors?include=url').json()
+        url = self.cURL['data'][0]['url'] + "?fpid=[fpid_value]"
+        print("Your list of links are:")
+        print(original_lang + "," + url)
+        for lang in destination_lang:
+            print(lang + "," + url + "&lang=" + lang_dict[lang])
+        return url
+
+    def postCollectorURL(self, survey_id):
+        jtext = {"type": "weblink"}
+        self.posturl = self.s.post(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors', json = jtext)
+        print("A new collector has been added.")
+
 
 
 
@@ -81,7 +92,6 @@ def updateConfig(k, content):
 
 
 
-
 #Read config.ini file
 config_object = ConfigParser()
 config_object.read("config.ini")
@@ -89,31 +99,32 @@ surveyinfo = config_object["SURVEYINFO"]
 apiinfo = config_object["APIINFO"]
 
 
-
 #Determine and test the two languages to translate between
 while True:
-    destination_lang = input('Please enter the language to translate into. To use last saved setting, press enter.')
-    if len(destination_lang)< 1:
-        destination_lang = surveyinfo['destination_lang']
-        destination_lang = destination_lang.strip().split()
-        print(destination_lang)
+    destination_lang_infile = surveyinfo['destination_lang']
+    destination_lang_entered = input(f'Please enter the language list you want to translate into. Press ENTER if the destination language is {destination_lang_infile}.')
+    #  {surveyinfo['destination_lang']}
+    if len(destination_lang_entered)< 1:
+        destination_lang = destination_lang_infile.strip().split(',')
         break
     else:
-        destination_lang = destination_lang.strip().split()
+        destination_lang = destination_lang_entered.strip().split()
         if all(x in lang_dict for x in destination_lang) == False:
             print('Unsupported language appears, please try again.')
             print(destination_lang)
         else:
-            updateConfig('destination_lang', destination_lang)
+            updateConfig('destination_lang', ','.join(destination_lang))
             break
 
-
+print(destination_lang)
 
 
 while True:
-    original_lang = input('Please enter the language to translate from. To use last saved setting, press enter.')
+    original_lang_infile = surveyinfo['original_lang']
+    original_lang = input(f'Please enter the language to translate from. Press ENTER if the original language is {original_lang_infile}.')
+    #  {surveyinfo['original_lang']}
     if len(original_lang)< 1:
-        original_lang = surveyinfo['original_lang']
+        original_lang = original_lang_infile
         break
     elif original_lang not in lang_list:
         print('Unsupported language, please try again.')
@@ -127,7 +138,7 @@ while True:
 
 
 # ask for excel file name and load into sorted dictionary
-excel_file_name = input("Please enter your translation excel file name? To use last saved setting, press enter.")
+excel_file_name = input(f"Please enter your translation excel file name? Press ENTER if the file name is {surveyinfo['excel_file_name']}.")
 if len(excel_file_name)< 1:
     excel_file_name = surveyinfo['excel_file_name']
 else:
@@ -143,11 +154,13 @@ transTable = makeSortedTable(excelfile, original_lang)
 
 # print(transTable)
 
+# with open('test.json', 'w') as f:
+#     json.dump(transTable, f)
 
 
 
 # Ask for survey name, get survey id and make connection
-surveyname = input("Please enter your the name of your survey. To use last saved setting, press enter.").strip()
+surveyname = input(f"Please enter your the name of your survey. Press ENTER if the survey name is {surveyinfo['surveyname']}.").strip()
 if len(surveyname) < 2:
     surveyname = surveyinfo['surveyname']
 else:
@@ -160,7 +173,6 @@ survey_id = m.getSurveyId(surveyname)
 
 
 
-
 #loop through the downloaded dic and substitute.
 
 
@@ -168,13 +180,19 @@ for deslang in destination_lang:
     print(f"Start substituting for {deslang}")
     langcode = lang_dict[deslang]
     clear_previous_trans = m.deleteLangTranslation(survey_id, langcode)
-    langjson = m.getLangResponse(survey_id, langcode)
+
+    if langcode == 'zh_Hans' or 'zh-Hant':
+        langjson = m.getLangResponse(survey_id, 'zh')
+    else:
+        langjson = m.getLangResponse(survey_id, langcode)
 
     # print("This is what's pulled from survey monkey:")
     # print(json.dumps(langjson, indent = 4))
 
     payload = {}
+    # print(json.dumps(langjson, indent = 4))
     payload['translations'] = langjson['translations']
+
 
     for row in transTable:
         for line in payload['translations']:
@@ -190,10 +208,21 @@ for deslang in destination_lang:
                 else:
                     # print('Found existing translation, start replace existing translation.')
                     line['translation'] = line['translation'].replace(origin_in_file, destination_in_file)
-                # if '"' in line['translation']: line['translation'].replace('"','\\"')
                 # print('Current version of translation:\n'+ line['translation'] + '\nResource ID is:\n' + line["resource_id"])
 
     payload["enabled"] = True
+
+# a little bit of test to use json encode and to do escape
+
+    # for dic in payload['translations']:
+    #     dic['default'] = json.JSONEncoder.encode(dic['default'])
+
+
+# deal with the escaping characters
+
+    for line in payload['translations']:
+        line['default'] = line['default'].replace('&', '&amp;')
+        line['default'] = line['default'].replace('“', '&ldquo;').replace('”', '&rdquo;')
 
 
     # for line in payload['translations']:
@@ -216,15 +245,25 @@ for deslang in destination_lang:
 
 
     print(f"End uploading for {deslang}.")
-    # print(r.reason)
-    # print(postr.status_code)
+    # print(postr.reason)
+    if postr.status_code != 200:
+        print(postr.status_code)
     # print(postr.text)
-    # print(json.dumps(postr.json(), indent = 4))
+        print(json.dumps(postr.json(), indent = 4))
+
+
+
+
+# get collector and create a list of links
+
+try:
+    url = m.getCollectorURL(survey_id)
+except:
+    postCollectorURL(survey_id)
+    url = m.getCollectorURL(survey_id)
+
+
 
 
 print("All Done!")
 print(f"The survey id is {m.survey_id}.")
-
-
-#get collector and create a list of links
-# print(m.getCollectorURL(survey_id).json())
