@@ -12,7 +12,7 @@ lang_list = ['English', 'Chinese', 'Korean', 'French', 'German', 'Russian', 'Jap
 
 #problem
 
-#feature request
+# TODO
 # interface
 # efficiency: exclude a string once substituted
 # for a specific locale
@@ -175,11 +175,12 @@ survey_id = m.getSurveyId(surveyname)
 
 #loop through the downloaded dic and substitute.
 
-
 for deslang in destination_lang:
     print(f"Start substituting for {deslang}")
     langcode = lang_dict[deslang]
     clear_previous_trans = m.deleteLangTranslation(survey_id, langcode)
+
+    # deal with Chinese locale
 
     if langcode == 'zh_Hans' or 'zh-Hant':
         langjson = m.getLangResponse(survey_id, 'zh')
@@ -190,7 +191,6 @@ for deslang in destination_lang:
     # print(json.dumps(langjson, indent = 4))
 
     payload = {}
-    # print(json.dumps(langjson, indent = 4))
     payload['translations'] = langjson['translations']
 
 
@@ -211,12 +211,6 @@ for deslang in destination_lang:
                 # print('Current version of translation:\n'+ line['translation'] + '\nResource ID is:\n' + line["resource_id"])
 
     payload["enabled"] = True
-
-# a little bit of test to use json encode and to do escape
-
-    # for dic in payload['translations']:
-    #     dic['default'] = json.JSONEncoder.encode(dic['default'])
-
 
 # deal with the escaping characters
 
