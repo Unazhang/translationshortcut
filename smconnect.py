@@ -5,6 +5,7 @@ import sys
 import pandas as pd
 from functools import lru_cache
 from configparser import ConfigParser
+# import GUI
 
 
 lang_dict = {'English':'en', 'Chinese':'zh', 'Korean':'ko', 'French':'fr', 'German':'de', 'Russian':'ru', 'Japanese':'ja', 'Polish': 'pl', 'Spanish':'es', 'Italian':'it', 'Vietnamese': 'vi', 'Arabic':'ar', 'Dutch':'nl', 'Indonesian':'id', 'Portuguese':'pt', 'Swedish':'sv', 'Thai':'th', 'Turkish':'tr', 'Chinese(Simplified)': 'zh_Hans', 'Chinese(Traditional)': 'zh_Hant', 'Norwegian': 'no'}
@@ -34,7 +35,7 @@ class Monkey():
         sur = self.s.get(url).json()
         # print(json.dumps(sur, indent = 4))
         for i in range(len(sur['data'])):
-            print(i, sur['data'][i]['title'])
+            print(i, sur['data'][i]['nickname'])
         try:
             index = int(input("Which of the surveys above are you referring? ENTER the number."))
         except:
@@ -85,8 +86,7 @@ class Monkey():
 
 
 
-def getExcel(excel_file_name):
-    excel_file_path = 'translationfile/' + excel_file_name + '.xlsx'
+def getExcel(excel_file_path):
     df = pd.read_excel(excel_file_path, 0, header = 0)
     df = df.dropna(how='all').dropna(axis=1, how='all')
     df.columns = df.columns.str.strip()
@@ -109,8 +109,8 @@ config_object = ConfigParser()
 config_object.read("config.ini")
 surveyinfo = config_object["SURVEYINFO"]
 apiinfo = config_object["APIINFO"]
-
-
+#
+#
 #Determine and test the two languages to translate between
 while True:
     destination_lang_infile = surveyinfo['destination_lang']
@@ -162,27 +162,27 @@ else:
 with open('template.json', 'r') as infile:
     template = json.load(infile)
 
-
-excelfile = getExcel(excel_file_name)
+excel_file_path = 'translationfile/' + excel_file_name + '.xlsx'
+excelfile = getExcel(excel_file_path)
 excelfile += template
 # print(excelfile)
 transTable = makeSortedTable(excelfile, original_lang)
 
 # print(transTable)
 
-# with open('test.json', 'w') as f:
-#     json.dump(transTable, f)
+with open('test.json', 'w') as f:
+    json.dump(transTable, f)
 
 
 
-# Ask for survey name, get survey id and make connection
+Ask for survey name, get survey id and make connection
 surveyname = input(f"Please enter your the name of your survey. Press ENTER if the survey name is {surveyinfo['surveyname']}.").strip()
 if len(surveyname) < 2:
     surveyname = surveyinfo['surveyname']
 else:
     updateConfig('surveyname', surveyname)
 
-# print(surveyname)
+print(surveyname)
 
 m = Monkey(apiinfo["YOUR_ACCESS_TOKEN"])
 survey_id = m.getSurveyId(surveyname)
