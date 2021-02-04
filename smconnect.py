@@ -62,19 +62,23 @@ class Monkey():
         self.deleter = self.s.delete('https://api.surveymonkey.com/v3/surveys/{}/languages/{}'.format(survey_id, langcode))
         return self.deleter
 
-    def getCollectorURL(self, survey_id):
-        self.cURL = self.s.get(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors?include=url').json()
-        url = self.cURL['data'][0]['url'] + "?fpid=[fpid_value]"
-        print("Your list of links are:")
-        print(chinese_lang_dict[original_lang] + " , " + url)
-        for lang in destination_lang:
-            print(chinese_lang_dict[lang] + " , " + url + "&lang=" + lang_dict[lang])
-        return url
-
     def postCollectorURL(self, survey_id):
         jtext = {"type": "weblink"}
-        self.posturl = self.s.post(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors', json = jtext)
+        self.posturl = self.s.post(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors', json=jtext)
         print("A new collector has been added.")
+
+    def getCollectorURL(self, survey_id):
+        self.cURL = self.s.get(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors?include=url').json()
+        try:
+            url = self.cURL['data'][0]['url'] + "?fpid=[fpid_value]"
+            print("Your list of links are:")
+            print(chinese_lang_dict[original_lang] + " , " + url)
+            for lang in destination_lang:
+                print(chinese_lang_dict[lang] + " , " + url + "&lang=" + lang_dict[lang])
+        except:
+            print("You haven't created any collectors.")
+            self.postCollectorURL(survey_id)
+            self.getCollectorURL(survey_id)
 
     def getLanguages(self, survey_id):
         getlang = self.s.get(f"https://api.surveymonkey.com/v3/surveys/{survey_id}/languages")
@@ -175,7 +179,7 @@ with open('test.json', 'w') as f:
 
 
 
-Ask for survey name, get survey id and make connection
+# Ask for survey name, get survey id and make connection
 surveyname = input(f"Please enter your the name of your survey. Press ENTER if the survey name is {surveyinfo['surveyname']}.").strip()
 if len(surveyname) < 2:
     surveyname = surveyinfo['surveyname']
@@ -264,7 +268,7 @@ for deslang in destination_lang:
 
 # get collector and create a list of links
 
-url = m.getCollectorURL(survey_id)
+m.getCollectorURL(survey_id)
 # if url.status_code != 200:
 #     m.postCollectorURL(survey_id)
 #     url = m.getCollectorURL(survey_id)

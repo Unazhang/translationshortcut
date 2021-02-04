@@ -28,13 +28,28 @@ class Monkey():
         url = f"https://api.surveymonkey.com/v3/surveys?title={surveyname}"
         sur = self.s.get(url).json()
         # print(json.dumps(sur, indent = 4))
+
+        surveynames = []
         for i in range(len(sur['data'])):
-            print(i, sur['data'][i]['nickname'])
-        try:
-            index = int(input("Which of the surveys above are you referring? ENTER the number."))
-        except:
-            print("Please enter a NUMBER")
-        self.survey_id = sur['data'][index]['id']
+            # print(i, sur['data'][i]['nickname'])
+            surveynames.append('Title: ' + str(sur['data'][i]['title']) + ', Nickname: ' + str(sur['data'][i]['nickname']))
+
+        if len(surveynames)>1:
+            layout2 = [[sg.Text('Please choose the survey you entered:')]] + [[sg.Radio(text=name, group_id="snames")] for name in surveynames] + [[sg.Submit()]]
+            window2 = sg.Window("Choose The Survey", layout2, font=('Helvetica', 15))
+            while True:
+                e, v = window2.read()
+                if e in  (None, 'Cancel'):
+                    break
+                if e == 'Submit':
+                    for key, boo in v.items():
+                        if boo == True:
+                            self.survey_id = sur['data'][key]['id']
+                    break
+            window2.close()
+        else:
+            self.survey_id = sur['data'][0]['id']
+
         return self.survey_id
 
     @lru_cache(maxsize=256)
@@ -56,19 +71,21 @@ class Monkey():
         self.deleter = self.s.delete('https://api.surveymonkey.com/v3/surveys/{}/languages/{}'.format(survey_id, langcode))
         return self.deleter
 
-    def getCollectorURL(self, survey_id):
-        self.cURL = self.s.get(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors?include=url').json()
-        url = self.cURL['data'][0]['url'] + "?fpid=[fpid_value]"
-        print("Your list of links are:")
-        print(chinese_lang_dict[original_lang] + " , " + url)
-        for lang in destination_lang:
-            print(chinese_lang_dict[lang] + " , " + url + "&lang=" + lang_dict[lang])
-        return url
-
     def postCollectorURL(self, survey_id):
         jtext = {"type": "weblink"}
         self.posturl = self.s.post(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors', json = jtext)
         print("A new collector has been added.")
+
+    def getCollectorURL(self, survey_id):
+        self.cURL = self.s.get(f'https://api.surveymonkey.com/v3/surveys/{survey_id}/collectors?include=url').json()
+        try:
+            url = self.cURL['data'][0]['url'] + "?fpid=[fpid_value]"
+            print("Your list of links are:")
+            print(chinese_lang_dict[original_lang] + " , " + url)
+            for lang in destination_lang:
+                print(chinese_lang_dict[lang] + " , " + url + "&lang=" + lang_dict[lang])
+        except:
+            print("You haven't created any collectors.")
 
     def getLanguages(self, survey_id):
         getlang = self.s.get(f"https://api.surveymonkey.com/v3/surveys/{survey_id}/languages")
@@ -80,9 +97,11 @@ class Monkey():
 def getExcel(excel_file_path):
     df = pd.read_excel(excel_file_path, 0, header = 0)
     df = df.dropna(how='all').dropna(axis=1, how='all')
-    df.columns = df.columns.str.strip()
+    # df.columns = df.columns.str.strip()
     df.rename(columns={"Chinese (Simplified)": "Chinese(Simplified)", "Chinese (Traditional)": "Chinese(Traditional)"}, inplace=True)
-    return df.to_dict('records')
+    langInExcel = df.columns.values
+    # print(langInExcel, type(langInExcel))
+    return (df.to_dict('records'), langInExcel)
 
 def makeSortedTable(origintable, original_lang):
     transTable = sorted(origintable, key = lambda k: len(k[original_lang]), reverse = True)
@@ -92,6 +111,14 @@ def updateConfig(k, content):
     config_object['SURVEYINFO'][k] = content
     with open('config.ini', 'w') as c:
         config_object.write(c)
+
+def validateLang(inputLang, langInExcel):
+    for lang in inputLang:
+        if lang not in langInExcel:
+            print(f'{lang} does not appear to be in the translation file. Please try again.')
+            return False
+    return True
+
 
 
 #Read config.ini file
@@ -121,7 +148,7 @@ layout = [[sg.Text('Please enter the following translation information:')],
           [sg.Output(size=(61, 5))],
           [sg.Submit(), sg.Cancel('Exit')]]
 
-window = sg.Window('Translation Substitution', layout)
+window = sg.Window('Translation Substitution', layout, font=('Helvetica', 15))
 
 
 
@@ -147,31 +174,33 @@ while True:
 
         print(original_lang, destination_lang, excel_file_path, surveyname)
 
+        with open('template.json', 'r') as infile:
+            template = json.load(infile)
+
+        excelfile, langInExcel = getExcel(excel_file_path)
+        excelfile += template
+        # print(excelfile)
+        transTable = makeSortedTable(excelfile, original_lang)
+
         langs = destination_lang.copy()
         langs.append(original_lang)
 
-        for lang in langs:
-            try:
-                lang_dict[lang]
-            except:
-                print(f'{lang} is a unsupported language. Please try again.')
-                break
+        if validateLang(langs, langInExcel) == False:
+            continue
 
         updateConfig('destination_lang', ' '.join(destination_lang))
         updateConfig('original_lang', original_lang)
         updateConfig('excel_file_path', excel_file_path)
         updateConfig('surveyname', surveyname)
 
-        with open('template.json', 'r') as infile:
-            template = json.load(infile)
-
-        excelfile = getExcel(excel_file_path)
-        excelfile += template
-        # print(excelfile)
-        transTable = makeSortedTable(excelfile, original_lang)
-
         m = Monkey(apiinfo["YOUR_ACCESS_TOKEN"])
-        survey_id = m.getSurveyId(surveyname)
+        
+        try: 
+            survey_id = m.getSurveyId(surveyname)
+        except:
+            print("Failed when obtaining survey ID. Please change your survey name.")
+            continue
+        
         print(f"The survey id is {m.survey_id}.")
 
         for deslang in destination_lang:
@@ -244,16 +273,16 @@ while True:
 
         # get collector and create a list of links
 
-        url = m.getCollectorURL(survey_id)
+        m.getCollectorURL(survey_id)
         # if url.status_code != 200:
         #     m.postCollectorURL(survey_id)
         #     url = m.getCollectorURL(survey_id)
 
-        print("All Done!")
+        print("All Done! Click EXIT if you are done with everything.")
 
 
 
-window.close()
+# window.close()
 
 
 
