@@ -3,8 +3,9 @@ import json
 
 
 def askFileName():
-    file_path = input("What's your translation file name?") + '.xlsx'
-    if len(file_path) < 6:file_path = 'questions.xlsx'
+    input_file_name = input("What's your translation file name?")
+    if len(input_file_name) < 6:input_file_name = 'satisfied'
+    file_path = 'translationfile/' + input_file_name + '.xlsx'
     return file_path
 
 def getExcel(file_path):
@@ -16,15 +17,23 @@ def makeSortedTable(origintable, original_lang):
     transTable = sorted(origintable, key = lambda k: len(k[original_lang]), reverse = True)
     return transTable
 
-file_path = 'gog.xlsx'
-df = getExcel(file_path)
+file_path = askFileName()
+dicf = getExcel(file_path)
+# print(dicf)
+
+with open('template.json', 'r') as infile:
+    template = json.load(infile)
+
+
+template += dicf
+
+print(json.dumps(template, indent = 4))
+
 
 with open('template.json', 'w') as outfile:
-    json.dump(df, outfile)
+    json.dump(template, outfile)
 
-# with open('template.json', 'r') as infile:
-#     template = json.load(infile)
-#
+
 # print(json.dumps(template, indent = 4))
 
 # print(transTable)
