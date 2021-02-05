@@ -12,7 +12,7 @@ config_object["SURVEYINFO"] = {
 }
 
 config_object["APIINFO"] = {
-    "YOUR_ACCESS_TOKEN": "v8P3p2WMWTaZNSuDosmN1qypC85Ezdk3G0xtol2fun3iBGzfqV7EWbbPqA51R07wXZhyfi0fW4Ro2GXjFtzgNvH0g0dNOuSuwnbAjtz8CNY27XAfda3aWb9mzUr8vf71",
+    "YOUR_ACCESS_TOKEN": "??????",
 }
 
 #Write the above sections to config.ini file
