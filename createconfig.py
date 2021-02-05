@@ -8,11 +8,12 @@ config_object["SURVEYINFO"] = {
     "destination_lang": "English",
     "original_lang": "Chinese",
     "excel_file_name": "testtrans",
-    "surveyname": "testtrans"
+    "surveyname": "testtrans",
+    "excel_file_path": " "
 }
 
 config_object["APIINFO"] = {
-    "YOUR_ACCESS_TOKEN": "??????",
+    "YOUR_ACCESS_TOKEN": "Enter your own token here"
 }
 
 #Write the above sections to config.ini file

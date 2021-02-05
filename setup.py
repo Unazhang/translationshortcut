@@ -7,9 +7,9 @@ Usage:
 
 from setuptools import setup
 
-APP = ['smconnect.py']
-DATA_FILES = []
-OPTIONS = {}
+APP = ['TranslationSub.py']
+DATA_FILES = ['template.json', 'config.ini']
+OPTIONS = {'packages': ['pandas', 'PySimpleGUI', 'certifi'], 'iconfile': 'world.icns'}
 
 setup(
     app=APP,

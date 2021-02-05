@@ -1,12 +1,10 @@
 import requests
 import json
-import html
 import sys
 import pandas as pd
 from functools import lru_cache
 import PySimpleGUI as sg
 from configparser import ConfigParser
-
 
 lang_dict = {'English':'en', 'Chinese':'zh', 'Korean':'ko', 'French':'fr', 'German':'de', 'Russian':'ru', 'Japanese':'ja', 'Polish': 'pl', 'Spanish':'es', 'Italian':'it', 'Vietnamese': 'vi', 'Arabic':'ar', 'Dutch':'nl', 'Indonesian':'id', 'Portuguese':'pt', 'Swedish':'sv', 'Thai':'th', 'Turkish':'tr', 'Chinese(Simplified)': 'zh_Hans', 'Chinese(Traditional)': 'zh_Hant', 'Norwegian': 'no'}
 lang_list = ['English', 'Chinese', 'Korean', 'French', 'German', 'Russian', 'Japanese', 'Polish', 'Spanish', 'Italian', 'Vietnamese', 'Arabic', 'Dutch', 'Indonesian', 'Portuguese', 'Swedish', 'Thai', 'Turkish', 'Chinese(Simplified)', 'Chinese(Traditional)', 'Norwegian']
@@ -32,7 +30,7 @@ class Monkey():
         surveynames = []
         for i in range(len(sur['data'])):
             # print(i, sur['data'][i]['nickname'])
-            surveynames.append('Title: ' + str(sur['data'][i]['title']) + ', Nickname: ' + str(sur['data'][i]['nickname']))
+            surveynames.append('Title: ' + str(sur['data'][i]['title']).strip() + ', Nickname: ' + str(sur['data'][i]['nickname']).strip())
 
         if len(surveynames)>1:
             layout2 = [[sg.Text('Please choose the survey you entered:')]] + [[sg.Radio(text=name, group_id="snames")] for name in surveynames] + [[sg.Submit()]]
@@ -60,7 +58,7 @@ class Monkey():
 
     def postLangTranslation(self, survey_id, langcode, jtext):
         self.postr = self.s.post('https://api.surveymonkey.com/v3/surveys/{}/languages/{}'.format(survey_id, langcode), json=jtext)
-        print("About to post to this address:" + 'https://api.surveymonkey.com/v3/surveys/{}/languages/{}'.format(survey_id, langcode))
+        # print("About to post to this address:" + 'https://api.surveymonkey.com/v3/surveys/{}/languages/{}'.format(survey_id, langcode))
         return self.postr
 
     def patchLangTranslation(self, survey_id, langcode, jtext):
@@ -134,10 +132,9 @@ surveyname = surveyinfo['surveyname']
 
 
 
-sg.theme('DarkAmber')
+sg.theme('LightBlue3')
 
-layout = [[sg.Text('Please enter the following translation information:')],
-          [sg.Text('Please enter the language list you want to translate into:')],
+layout = [[sg.Text('Please enter the language list you want to translate into:')],
           [sg.InputText(f'{destination_lang_infile}')],
           [sg.Text('Please enter the language to translate from:')],
           [sg.InputText(f'{original_lang_infile}')],
@@ -172,7 +169,7 @@ while True:
             destination_lang = [x for x in destination_lang if x != "Chinese" and x != "(Traditional)"]
             destination_lang += ["Chinese(Traditional)"]
 
-        print(original_lang, destination_lang, excel_file_path, surveyname)
+        # print(original_lang, destination_lang, excel_file_path, surveyname)
 
         with open('template.json', 'r') as infile:
             template = json.load(infile)
@@ -256,7 +253,7 @@ while True:
 
             #post back the new translation
             postr = m.postLangTranslation(m.survey_id, langcode, payload)
-            print("Status Code:" + str(postr.status_code))
+            # print("Status Code:" + str(postr.status_code))
             if postr.status_code != 200:
                 print("An error occured!\n" + "Error Code: " + str(postr.status_code))
                 # print(json.dumps(postr.json(), indent = 4))
