@@ -82,8 +82,11 @@ class Monkey():
             print(chinese_lang_dict[original_lang] + " , " + url)
             for lang in destination_lang:
                 print(chinese_lang_dict[lang] + " , " + url + "&lang=" + lang_dict[lang])
+            return True
         except:
             print("You haven't created any collectors.")
+            return False
+
 
     def getLanguages(self, survey_id):
         getlang = self.s.get(f"https://api.surveymonkey.com/v3/surveys/{survey_id}/languages")
@@ -134,7 +137,7 @@ surveyname = surveyinfo['surveyname']
 
 sg.theme('LightBlue3')
 
-layout = [[sg.Text('Please enter the language list you want to translate into:')],
+layout = [[sg.Text('Please copy the language list you want to translate into and paste here:')],
           [sg.InputText(f'{destination_lang_infile}')],
           [sg.Text('Please enter the language to translate from:')],
           [sg.InputText(f'{original_lang_infile}')],
@@ -142,11 +145,12 @@ layout = [[sg.Text('Please enter the language list you want to translate into:')
           [sg.Input(f'{excel_file_path_infile}'), sg.FileBrowse()],
           [sg.Text('Please enter the name of your survey:')],
           [sg.InputText(f'{surveyname}')],
+        #   [sg.ProgressBar(1000, orientation='h', size=(20, 20), key='progressbar')],
           [sg.Output(size=(61, 5))],
           [sg.Submit(), sg.Cancel('Exit')]]
 
 window = sg.Window('Translation Substitution', layout, font=('Helvetica', 15))
-
+# progress_bar = window['progressbar']
 
 
 
@@ -171,10 +175,15 @@ while True:
 
         # print(original_lang, destination_lang, excel_file_path, surveyname)
 
+        try: 
+            excelfile, langInExcel = getExcel(excel_file_path)
+        except:
+            print("Your file doesn't exist. Try again.")
+            continue
+
         with open('template.json', 'r') as infile:
             template = json.load(infile)
 
-        excelfile, langInExcel = getExcel(excel_file_path)
         excelfile += template
         # print(excelfile)
         transTable = makeSortedTable(excelfile, original_lang)
@@ -238,6 +247,7 @@ while True:
             for line in payload['translations']:
                 line['default'] = line['default'].replace('&', '&amp;')
                 line['default'] = line['default'].replace('“', '&ldquo;').replace('”', '&rdquo;')
+                # line['default'] = line['default'].replace('<', '&lt;').replace('>', '&gt;')
 
 
             # for line in payload['translations']:
@@ -270,16 +280,15 @@ while True:
 
         # get collector and create a list of links
 
-        m.getCollectorURL(survey_id)
-        # if url.status_code != 200:
-        #     m.postCollectorURL(survey_id)
-        #     url = m.getCollectorURL(survey_id)
+        if m.getCollectorURL(survey_id) is False:
+            m.postCollectorURL(survey_id)
+            m.getCollectorURL(survey_id)
 
         print("All Done! Click EXIT if you are done with everything.")
 
 
 
-# window.close()
+window.close()
 
 
 
