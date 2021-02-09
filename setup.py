@@ -8,7 +8,7 @@ Usage:
 from setuptools import setup
 
 APP = ['TranslationSub.py']
-DATA_FILES = ['template.json', ('.',['config.ini'])]
+DATA_FILES = ['template.json', 'config.ini']
 OPTIONS = {'packages': ['pandas', 'PySimpleGUI', 'certifi'], 'iconfile': 'world.icns'}
 
 setup(
