@@ -5,6 +5,8 @@ import pandas as pd
 from functools import lru_cache
 import PySimpleGUI as sg
 from configparser import ConfigParser
+import os
+
 
 lang_dict = {'English':'en', 'Chinese':'zh', 'Korean':'ko', 'French':'fr', 'German':'de', 'Russian':'ru', 'Japanese':'ja', 'Polish': 'pl', 'Spanish':'es', 'Italian':'it', 'Vietnamese': 'vi', 'Arabic':'ar', 'Dutch':'nl', 'Indonesian':'id', 'Portuguese':'pt', 'Swedish':'sv', 'Thai':'th', 'Turkish':'tr', 'Chinese(Simplified)': 'zh_Hans', 'Chinese(Traditional)': 'zh_Hant', 'Norwegian': 'no'}
 lang_list = ['English', 'Chinese', 'Korean', 'French', 'German', 'Russian', 'Japanese', 'Polish', 'Spanish', 'Italian', 'Vietnamese', 'Arabic', 'Dutch', 'Indonesian', 'Portuguese', 'Swedish', 'Thai', 'Turkish', 'Chinese(Simplified)', 'Chinese(Traditional)', 'Norwegian']
@@ -42,13 +44,13 @@ class Monkey():
                 if e == 'Submit':
                     for key, boo in v.items():
                         if boo == True:
-                            self.survey_id = sur['data'][key]['id']
+                            survey_id = sur['data'][key]['id']
                     break
             window2.close()
         else:
-            self.survey_id = sur['data'][0]['id']
+            survey_id = sur['data'][0]['id']
 
-        return self.survey_id
+        return survey_id
 
     @lru_cache(maxsize=256)
     def getLangResponse(self, survey_id, langcode):
@@ -124,7 +126,7 @@ def validateLang(inputLang, langInExcel):
 
 #Read config.ini file
 config_object = ConfigParser()
-config_object.read("config.ini")
+config_object.read(os.path.abspath("config.ini"))
 surveyinfo = config_object["SURVEYINFO"]
 apiinfo = config_object["APIINFO"]
 
@@ -143,14 +145,14 @@ layout = [[sg.Text('Please copy the language list you want to translate into and
           [sg.InputText(f'{original_lang_infile}')],
           [sg.Text('Please choose your translation excel file:')],
           [sg.Input(f'{excel_file_path_infile}'), sg.FileBrowse()],
-          [sg.Text('Please enter the name of your survey:')],
+          [sg.Text('Please enter the NAME(not nickname) of your survey:')],
           [sg.InputText(f'{surveyname}')],
-        #   [sg.ProgressBar(1000, orientation='h', size=(20, 20), key='progressbar')],
           [sg.Output(size=(61, 5))],
+        #   [sg.ProgressBar(len(destination_lang_infile), orientation='h', size=(57, 20), key='progressbar')],
           [sg.Submit(), sg.Cancel('Exit')]]
 
 window = sg.Window('Translation Substitution', layout, font=('Helvetica', 15))
-# progress_bar = window['progressbar']
+# progressbar = window['progressbar']
 
 
 
@@ -181,7 +183,7 @@ while True:
             print("Your file doesn't exist. Try again.")
             continue
 
-        with open('template.json', 'r') as infile:
+        with open(os.path.abspath('template.json'), 'r') as infile:
             template = json.load(infile)
 
         excelfile += template
@@ -203,11 +205,11 @@ while True:
         
         try: 
             survey_id = m.getSurveyId(surveyname)
+            print(f"The survey id is {survey_id}.")
         except:
             print("Failed when obtaining survey ID. Please change your survey name.")
             continue
         
-        print(f"The survey id is {m.survey_id}.")
 
         for deslang in destination_lang:
             print(f"Start substituting for {deslang}")
@@ -262,7 +264,7 @@ while True:
 
 
             #post back the new translation
-            postr = m.postLangTranslation(m.survey_id, langcode, payload)
+            postr = m.postLangTranslation(survey_id, langcode, payload)
             # print("Status Code:" + str(postr.status_code))
             if postr.status_code != 200:
                 print("An error occured!\n" + "Error Code: " + str(postr.status_code))
@@ -272,9 +274,11 @@ while True:
             else:
                 print(f"End uploading for {deslang}.")
 
+            # progressbar.UpdateBar(i + 1)
+
             # print(json.dumps(postr.json(), indent=4), postr.status_code)
 
-            # patchr = m.patchLangTranslation(m.survey_id, langcode, payload)
+            # patchr = m.patchLangTranslation(survey_id, langcode, payload)
             # print(json.dumps(patchr.json(), indent=4), patchr.status_code)
 
 
